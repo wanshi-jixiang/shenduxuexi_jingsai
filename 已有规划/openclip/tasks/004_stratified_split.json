@@ -1,0 +1,31 @@
+{
+  "id": "004_stratified_split",
+  "title": "生成分层训练集与验证集划分",
+  "goal": "按固定随机种子生成 8:2 分层 train/val CSV，使所有模型共享同一验证口径。",
+  "inputs": [
+    "训练集目录：configs/default.yaml 中的 train_dir",
+    "标签映射：outputs/audit/label_map.json",
+    "随机种子：configs/default.yaml 中的 seed",
+    "验证比例：0.2"
+  ],
+  "outputs": [
+    "outputs/splits/train.csv，字段至少包含 filepath、label、label_id",
+    "outputs/splits/val.csv，字段至少包含 filepath、label、label_id",
+    "outputs/splits/split_summary.json，记录每类 train/val 数量和随机种子"
+  ],
+  "acceptance_criteria": [
+    "每个类别都同时出现在 train.csv 和 val.csv 中。",
+    "disgust 类验证集数量不为 0，且划分比例接近 8:2。",
+    "train.csv 与 val.csv 没有重复 filepath。",
+    "所有 filepath 指向真实存在的图片文件。",
+    "使用同一随机种子重复运行生成完全一致的 CSV。",
+    "后续所有模型训练都引用这份划分，不各自重新随机切分。"
+  ],
+  "depends_on": ["003_label_config"],
+  "priority": "required",
+  "implementation_notes": [
+    "使用 sklearn.model_selection.train_test_split 的 stratify 参数或等价实现。",
+    "CSV 路径建议保存为相对 train_dir 的路径，并在读取时解析为绝对路径。",
+    "拆分前先按稳定排序收集样本，避免文件系统顺序影响可复现性。"
+  ]
+}

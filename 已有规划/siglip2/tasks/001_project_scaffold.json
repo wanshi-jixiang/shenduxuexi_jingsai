@@ -1,0 +1,33 @@
+{
+  "id": "001_project_scaffold",
+  "title": "建立项目脚手架与可配置运行入口",
+  "goal": "创建可复现的代码、配置、输出目录和依赖说明，为后续数据审计、训练、推理与提交导出提供统一工程入口。",
+  "inputs": [
+    "源规划文档：H:/AI/jingsai/图像情感识别比赛实现路径分析.md",
+    "比赛数据根目录：H:/AI/jingsai/dataset",
+    "目标技术栈：Python, PyTorch, torchvision, timm, transformers, scikit-learn, pandas, Pillow, PyYAML, accelerate"
+  ],
+  "outputs": [
+    "src/ 包目录，至少包含 __init__.py",
+    "configs/default.yaml，包含 train_dir、test_dir、output_dir、seed、batch_size、num_workers、device、mixup_alpha、cutmix_alpha、label_smoothing、warmup_epochs、lr_scheduler、backbone_name、feature_dim、finetune_strategy 等可配置项",
+    "outputs/ 产物目录，包含 audit、splits、reports、checkpoints、submissions、features 子目录",
+    "requirements.txt，列出实现所需核心依赖",
+    "README.md 或等价运行说明，描述基础命令入口"
+  ],
+  "acceptance_criteria": [
+    "所有数据路径都从配置读取，代码中不硬编码中文乱码路径或绝对路径。",
+    "运行入口存在，例如 python -m src.audit_data、python -m src.train_baseline、python -m src.infer。",
+    "输出目录可重复创建，重复运行不会因目录已存在而失败。",
+    "依赖说明覆盖 PyTorch、torchvision、timm、transformers、scikit-learn、pandas、Pillow、PyYAML、accelerate。",
+    "配置文件包含 Mixup、CutMix、Label Smoothing、学习率调度、目标视觉骨干和微调策略等参数。",
+    "新建目录结构能被后续任务直接引用。"
+  ],
+  "depends_on": [],
+  "priority": "required",
+  "implementation_notes": [
+    "优先使用 ASCII 目录名作为代码与输出目录，避免 Windows 终端编码问题。",
+    "配置文件中保留中文数据目录的原始路径，但代码内部用 pathlib.Path 处理路径。",
+    "不要在此任务实现训练逻辑，只建立最小可运行的工程骨架。",
+    "配置文件默认值应显式落到当前工作区：train_dir=H:/AI/jingsai/dataset/train/train，test_dir=H:/AI/jingsai/dataset/test/test，output_dir=<project_root>/outputs；主干默认 backbone_name=google/siglip2-so400m-patch16-384, feature_dim=1152。"
+  ]
+}

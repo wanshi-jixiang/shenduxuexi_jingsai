@@ -1,0 +1,45 @@
+{
+  "id": "013_openclip_finetune",
+  "title": "分层学习率（LLRD）微调 OpenCLIP",
+  "goal": "在冻结特征分类头稳定后，使用分层学习率（Layer-wise Learning Rate Decay）微调 OpenCLIP，替代简单的冻结-解冻策略。这是相比原计划的核心优化之一。",
+  "inputs": [
+    "最佳冻结特征分类头 checkpoint：outputs/checkpoints/openclip_vit_l14_head_best.pt",
+    "OpenCLIP 模型与 preprocess（ViT-L-14 + DataComp XL）",
+    "outputs/splits/train.csv",
+    "outputs/splits/val.csv",
+    "冻结分类头验证报告",
+    "configs/default.yaml 中的 llrd_decay 配置"
+  ],
+  "outputs": [
+    "src/finetune_openclip.py 或等价入口",
+    "src/llrd_utils.py，包含分层学习率分组工具函数",
+    "outputs/checkpoints/openclip_vit_l14_finetune_best.pt",
+    "outputs/reports/openclip_vit_l14_finetune_metrics.json",
+    "outputs/reports/openclip_vit_l14_finetune_vs_head.json",
+    "outputs/reports/openclip_vit_l14_finetune_layer_lr_config.json，记录每层的学习率",
+    "outputs/submissions/openclip_vit_l14_finetune_* 提交文件，仅在收益明确时生成或标记为候选"
+  ],
+  "acceptance_criteria": [
+    "使用分层学习率（LLRD）而非简单的冻结-解冻策略。",
+    "从 embedding 层到最后一层，学习率按 llrd_decay 系数（默认 0.8）逐层递增。",
+    "顶层（分类头附近）学习率最高，底层（embedding）学习率最低。",
+    "微调学习率顶层不超过分类头学习率的 1/10。",
+    "学习率调度使用 Warmup（3 epochs）+ Cosine Annealing。",
+    "损失函数使用 Label Smoothing Cross Entropy（smoothing=0.1）。",
+    "与冻结分类头使用同一 train/val 划分和同一指标函数。",
+    "仅当 Macro-F1 相比冻结分类头提升且少数类没有明显恶化时，将微调模型标记为保留。",
+    "如果验证 loss 持续上升、Macro-F1 不稳定或少数类恶化，则回退到冻结特征分类头。",
+    "对照报告明确记录保留或回退决策。",
+    "llrd_utils.py 能输出每层的实际学习率配置，便于调试。"
+  ],
+  "depends_on": ["012_openclip_classifier_head"],
+  "priority": "required",
+  "implementation_notes": [
+    "LLRD 实现思路：遍历模型的所有命名参数组，按层级深度分配不同学习率。顶层 lr = base_lr，第 i 层 lr = base_lr * (llrd_decay ^ i)。",
+    "对于 ViT-L-14，典型层级划分为：patch_embedding -> transformer blocks 0-23 -> ln_post -> 分类头。",
+    "显存不足时降低 batch_size 或使用梯度累积，不要跳过微调。",
+    "微调阶段应开启更严格的 early stopping（patience=10）或最佳 checkpoint 保存。",
+    "不要让微调失败阻塞最终提交，最佳冻结分类头必须保留。",
+    "建议保存每层学习率配置到 JSON，便于后续分析和调试。"
+  ]
+}

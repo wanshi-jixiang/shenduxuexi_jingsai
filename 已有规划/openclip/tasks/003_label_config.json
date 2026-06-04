@@ -1,0 +1,27 @@
+{
+  "id": "003_label_config",
+  "title": "固定类别顺序与标签映射",
+  "goal": "建立全项目唯一的 8 类标签顺序、label_to_id 和 id_to_label 映射，避免训练、评估和提交阶段标签错位。",
+  "inputs": [
+    "审计输出：outputs/audit/data_audit.json",
+    "固定类别列表：amusement, anger, awe, contentment, disgust, excitement, fear, sadness"
+  ],
+  "outputs": [
+    "src/labels.py，暴露 CLASSES、label_to_id、id_to_label、NUM_CLASSES、validate_label 等接口",
+    "outputs/audit/label_map.json，保存类别顺序与双向映射"
+  ],
+  "acceptance_criteria": [
+    "类别顺序在所有运行中保持稳定，不根据文件系统返回顺序漂移。",
+    "label_to_id 和 id_to_label 可逆，8 个类别无重复、无缺失。",
+    "validate_label 对非法标签抛出明确异常。",
+    "label_map.json 中的类别顺序与 src/labels.py 完全一致。",
+    "后续数据集、指标、提交任务只引用该统一映射。"
+  ],
+  "depends_on": ["002_data_audit"],
+  "priority": "required",
+  "implementation_notes": [
+    "类别顺序建议沿用规划文档中的列表顺序，而不是按样本数排序。",
+    "提交文件输出标签必须使用英文类别名，不输出数字 id。",
+    "非法标签错误信息应包含可接受的完整类别列表。"
+  ]
+}

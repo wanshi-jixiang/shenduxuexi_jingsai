@@ -1,0 +1,35 @@
+{
+  "id": "010_openclip_zeroshot",
+  "title": "建立 OpenCLIP 零样本 Prompt Baseline（ViT-L-14 优先）",
+  "goal": "用 OpenCLIP 文本 prompt 对验证集进行零样本分类，观察 8 类情绪语义可分性和 prompt 口径偏差。优先使用 ViT-L-14 + DataComp XL 作为默认模型，ViT-B-16 作为轻量对照。",
+  "inputs": [
+    "OpenCLIP 模型配置，默认 ViT-L-14 + DataComp XL（首选），ViT-B-16 + DataComp XL（对照）",
+    "验证集 CSV：outputs/splits/val.csv",
+    "OpenCLIP 官方 preprocess",
+    "8 类英文标签和 prompt 模板"
+  ],
+  "outputs": [
+    "src/openclip_zeroshot.py 或等价入口",
+    "outputs/reports/openclip_zeroshot_vit_l14_metrics.json",
+    "outputs/reports/openclip_zeroshot_vit_b16_metrics.json（可选对照）",
+    "outputs/reports/openclip_zeroshot_prompt_details.json",
+    "outputs/reports/openclip_zeroshot_confusion_matrix.csv"
+  ],
+  "acceptance_criteria": [
+    "能为 8 个类别构造英文 prompt，例如 a photo that evokes amusement。",
+    "默认使用 ViT-L-14 + DataComp XL 进行零样本评估。",
+    "能对验证集输出每张图的零样本预测和类别概率。",
+    "能用统一指标函数计算 Macro-F1、Accuracy、每类指标和混淆矩阵。",
+    "报告记录使用的模型名、权重名、prompt 模板和类别文本。",
+    "该结果只作为语义观察和 baseline，不被标记为最终唯一提交方案。"
+  ],
+  "depends_on": ["006_augmentation_pipeline", "007_metrics_report"],
+  "priority": "required",
+  "implementation_notes": [
+    "ViT-L-14 + DataComp XL 是本计划的第一优先级模型，显存需求约 16-20GB，3090 可行。",
+    "如果 ViT-L-14 显存不足，可以降低 batch_size 或使用 ViT-B-16 作为替代。",
+    "文本特征应归一化，图像特征也应归一化，再用相似度得到 logits。",
+    "可支持多 prompt 模板取平均文本特征，但首版保持少量清晰模板。",
+    "如果权重下载失败，记录失败原因并保留 EfficientNet 基线作为兜底。"
+  ]
+}

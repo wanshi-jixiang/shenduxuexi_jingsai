@@ -1,0 +1,40 @@
+{
+  "id": "006_augmentation_pipeline",
+  "title": "实现 Mixup + CutMix + Label Smoothing 增强管线",
+  "goal": "为训练阶段实现完整的数据增强管线，包含 Mixup、CutMix 和 Label Smoothing，以及 OpenCLIP 与 CNN 专属预处理。这是相比原计划的核心优化之一。",
+  "inputs": [
+    "configs/default.yaml 中的增强配置：mixup_alpha、cutmix_alpha、label_smoothing",
+    "src/datasets.py 暴露的 Dataset transform 注入点",
+    "OpenCLIP 模型名与权重名",
+    "CNN 输入尺寸和 ImageNet 归一化参数"
+  ],
+  "outputs": [
+    "src/transforms.py，包含 build_openclip_transforms、build_cnn_transforms 或等价接口",
+    "src/augmentation.py，包含 MixupCutMixCollator、Mixup、CutMix 实现",
+    "src/losses.py，包含 LabelSmoothingCrossEntropy、ClassWeightedCEWithSmoothing 实现",
+    "预处理与增强配置说明文档"
+  ],
+  "acceptance_criteria": [
+    "OpenCLIP 分支使用 open_clip.create_model_and_transforms(...) 返回的 preprocess 或保持等价预处理。",
+    "CNN/EfficientNet 分支使用与 ImageNet 预训练权重匹配的 resize/crop/normalize。",
+    "Mixup 实现支持 alpha 参数控制混合强度，默认 alpha=0.2。",
+    "CutMix 实现支持 alpha 参数控制区域替换强度，默认 alpha=1.0。",
+    "Mixup 和 CutMix 在每个 batch 中随机选择一种或按概率切换，而不是同时应用。",
+    "Label Smoothing 实现支持 smoothing 参数，默认 smoothing=0.1。",
+    "训练增强只包含温和水平翻转、轻度亮度/对比度/饱和度扰动、轻度缩放等不破坏情绪语义的操作。",
+    "不使用垂直翻转、极端颜色扰动、大面积遮挡主体或强随机裁剪。",
+    "验证和测试 transform 不包含随机增强和 Mixup/CutMix。",
+    "每个模型分支能明确选择自己的 transform。"
+  ],
+  "depends_on": ["005_dataset_loader"],
+  "priority": "required",
+  "implementation_notes": [
+    "Mixup 和 CutMix 应在 DataLoader 的 collate_fn 中实现，而不是在 Dataset 的 __getitem__ 中。",
+    "MixupCutMixCollator 应接受 training 标志，验证时自动禁用。",
+    "Label Smoothing 可以集成到损失函数中，也可以作为独立模块。推荐集成到损失函数。",
+    "Mixup/CutMix 的标签混合需要配合 Label Smoothing 使用：先生成软标签，再平滑。",
+    "OpenCLIP 官方 preprocess 通常适合验证和推理；训练阶段若加入增强，需要谨慎对齐输入尺寸和归一化。",
+    "CNN 分支可优先使用 torchvision.transforms 或 timm.data.create_transform。",
+    "不要为了复用代码牺牲不同预训练模型的输入分布要求。"
+  ]
+}

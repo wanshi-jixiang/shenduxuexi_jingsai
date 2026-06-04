@@ -1,0 +1,33 @@
+{
+  "id": "014_advanced_strategy_gate",
+  "title": "按收益评估 Cambrian-1 双视觉塔 高阶提分策略",
+  "goal": "对 TTA、互补模型融合、5 折、专家分支和伪标签进行收益门控评估，只保留同口径验证提升明确的策略。",
+  "inputs": [
+    "Cambrian-1 双视觉塔 当前最佳模型 checkpoint 和验证报告",
+    "Cambrian-1 双视觉塔 冻结特征分类头或融合头报告",
+    "可用时间、GPU 显存和训练预算配置"
+  ],
+  "outputs": [
+    "outputs/reports/advanced_strategy_gate.json，记录每项策略的配置、指标、收益和保留决策",
+    "候选增强策略的 checkpoint 或预测文件",
+    "若通过门控，输出更新后的 best_model_manifest.json"
+  ],
+  "acceptance_criteria": [
+    "每个新增策略都单独与当前最佳方案对照，不混合多个未验证变量。",
+    "新增策略相对当前最佳 Macro-F1 提升不足 1 个百分点时默认不保留。",
+    "融合模型必须优于参与融合的任一单模型，否则不保留融合结果。",
+    "TTA 仅使用水平翻转和温和多尺度等不破坏语义的方式。",
+    "伪标签仅允许在最终冲刺阶段使用高置信测试样本，并且必须通过验证收益门控。",
+    "最终报告能明确指出当前最佳提交模型来源，默认候选来自 Cambrian-1 双塔 late-fusion 头或 adapter 模型，并记录被拒绝策略原因。"
+  ],
+  "depends_on": [
+    "013_cambrian1_sva_adapter_gate"
+  ],
+  "priority": "required",
+  "implementation_notes": [
+    "高阶策略优先级建议为：温和 TTA、单个互补模型融合、分层 5 折、专家分支、伪标签。",
+    "不要因策略复杂而默认启用；收益门控是此任务的核心。",
+    "若时间或算力不足，可以生成 gate 报告并明确选择当前最佳单模型作为最终模型。",
+    "Cambrian-1 双视觉塔 主线模型已经是核心方案，此处高阶策略指的是 TTA、融合、5 折等。"
+  ]
+}

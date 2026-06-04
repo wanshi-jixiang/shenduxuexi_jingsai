@@ -1,0 +1,36 @@
+{
+  "id": "011_openclip_feature_cache",
+  "title": "缓存冻结 OpenCLIP 图像特征（ViT-L-14 优先）",
+  "goal": "冻结 OpenCLIP 图像编码器，为训练集、验证集和测试集批量提取图像特征并缓存，降低分类头训练成本。优先提取 ViT-L-14 特征。",
+  "inputs": [
+    "OpenCLIP 模型与 preprocess（默认 ViT-L-14 + DataComp XL）",
+    "outputs/splits/train.csv",
+    "outputs/splits/val.csv",
+    "测试 Dataset",
+    "批大小、设备和输出目录配置"
+  ],
+  "outputs": [
+    "src/cache_openclip_features.py 或等价入口",
+    "outputs/features/openclip_vit_l14_train_features.pt 或 .npy",
+    "outputs/features/openclip_vit_l14_val_features.pt 或 .npy",
+    "outputs/features/openclip_vit_l14_test_features.pt 或 .npy",
+    "outputs/features/openclip_feature_manifest.json"
+  ],
+  "acceptance_criteria": [
+    "训练、验证、测试特征数量分别与对应样本数量完全一致。",
+    "manifest 记录每条特征对应的 filepath、filename 或 label 信息，顺序可追溯。",
+    "特征张量维度与 OpenCLIP 图像编码器输出维度一致（ViT-L-14 为 1024 维）。",
+    "特征提取在 torch.no_grad() 下执行，模型处于 eval 模式。",
+    "支持分批处理，显存不足时可以降低 batch_size 继续运行。",
+    "重复运行可以检测已有缓存并根据配置选择复用或覆盖。"
+  ],
+  "depends_on": ["010_openclip_zeroshot"],
+  "priority": "required",
+  "implementation_notes": [
+    "ViT-L-14 的特征维度为 1024，比 ViT-B-16 的 512 维更大，分类头输入维度需相应调整。",
+    "缓存特征前应确保图像 transform 与 OpenCLIP 官方 preprocess 一致。",
+    "建议同时保存 label_id，避免后续分类头训练再次读取图片。",
+    "测试集 manifest 必须保持数字自然序，便于最终提交。",
+    "如果显存不足，可以使用 float16 缓存特征以减少存储空间。"
+  ]
+}

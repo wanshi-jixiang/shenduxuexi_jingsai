@@ -1,0 +1,39 @@
+{
+  "id": "011_internvit6b_feature_cache",
+  "title": "缓存冻结 InternViT-6B 图像特征",
+  "goal": "冻结 InternViT-6B 图像编码器，为训练集、验证集和测试集批量提取图像特征并缓存。",
+  "inputs": [
+    "InternViT-6B 模型与 image processor",
+    "outputs/reports/internvit6b_probe.json",
+    "outputs/splits/train.csv",
+    "outputs/splits/val.csv",
+    "测试 Dataset",
+    "批大小、设备和输出目录配置"
+  ],
+  "outputs": [
+    "src/cache_internvit6b_features.py 或等价入口",
+    "outputs/features/internvit6b_train_features.pt 或 .npy",
+    "outputs/features/internvit6b_val_features.pt 或 .npy",
+    "outputs/features/internvit6b_test_features.pt 或 .npy",
+    "outputs/features/internvit6b_feature_manifest.json"
+  ],
+  "acceptance_criteria": [
+    "训练、验证、测试特征数量分别与对应样本数量完全一致。",
+    "manifest 记录每条特征对应的 filepath、filename 或 label 信息，顺序可追溯。",
+    "特征张量维度与 InternViT-6B 输出维度一致，并写入 manifest。",
+    "特征提取在 torch.no_grad() 下执行，模型处于 eval 模式。",
+    "支持从 probe 报告读取安全 batch_size。",
+    "重复运行可以检测已有缓存并根据配置选择复用或覆盖。"
+  ],
+  "depends_on": [
+    "005_dataset_loader",
+    "010_internvit6b_probe"
+  ],
+  "priority": "required",
+  "implementation_notes": [
+    "缓存前应确保图像 transform 与 InternViT-6B image processor 一致。",
+    "建议同时保存 label_id，避免后续分类头训练再次读取图片。",
+    "测试集 manifest 必须保持数字自然序，便于最终提交。",
+    "如果特征维度很大，优先使用 float16 存储并在分类头训练时按需转回 float32。"
+  ]
+}

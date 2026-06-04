@@ -1,0 +1,46 @@
+{
+  "id": "009_efficientnet_baseline",
+  "title": "跑通 EfficientNet 工程基线（集成全部优化）",
+  "goal": "使用 EfficientNetV2-S 快速跑通数据加载、Mixup/CutMix 增强、Label Smoothing 损失、Warmup+Cosine 学习率调度、训练、验证、推理和提交导出闭环，作为工程兜底和 OpenCLIP 对照。这是验证所有优化技术是否正常工作的关键任务。",
+  "inputs": [
+    "outputs/splits/train.csv",
+    "outputs/splits/val.csv",
+    "src/datasets.py",
+    "src/transforms.py 中的 CNN transform",
+    "src/augmentation.py 中的 MixupCutMixCollator",
+    "src/losses.py 中的 LabelSmoothingCrossEntropy",
+    "src/metrics.py",
+    "src/submission_writer.py 或等价提交导出接口",
+    "configs/default.yaml 中的训练配置"
+  ],
+  "outputs": [
+    "src/train_baseline.py 或等价训练入口",
+    "outputs/checkpoints/efficientnet_baseline_best.pt",
+    "outputs/reports/efficientnet_baseline_metrics.json",
+    "outputs/reports/efficientnet_baseline_confusion_matrix.csv",
+    "outputs/reports/efficientnet_baseline_training_curves.json，记录每 epoch 的 loss、lr、Macro-F1",
+    "outputs/submissions/efficientnet_baseline_* 提交文件"
+  ],
+  "acceptance_criteria": [
+    "训练脚本能完成至少 20 个完整 epoch 的训练和验证流程。",
+    "训练过程启用 Mixup + CutMix 增强（通过 collate_fn）。",
+    "损失函数使用 Label Smoothing Cross Entropy（smoothing=0.1）。",
+    "学习率调度使用 Warmup（5 epochs）+ Cosine Annealing。",
+    "验证阶段输出 Macro-F1、Accuracy、每类指标和混淆矩阵。",
+    "最佳 checkpoint 根据 Macro-F1 保存，而不是根据训练 loss 或 Accuracy 单独保存。",
+    "推理脚本能加载该 checkpoint 并对 1391 张测试图片生成预测。",
+    "提交导出通过 008_submission_writer 的全部校验。",
+    "如果 OpenCLIP 环境不可用，该基线仍可作为完整兜底路线运行。"
+  ],
+  "depends_on": ["006_augmentation_pipeline", "007_metrics_report", "008_submission_writer"],
+  "priority": "required",
+  "implementation_notes": [
+    "优先使用 timm.create_model 创建 efficientnetv2_s，并替换 8 类分类头。",
+    "训练循环结构：MixupCutMixCollator 作为 DataLoader 的 collate_fn，LabelSmoothingCE 作为损失函数，Warmup+Cosine 作为调度器。",
+    "Warmup 实现：前 warmup_epochs 个 epoch 线性从 0 增长到初始学习率，之后切换为 Cosine Annealing。",
+    "早停策略：Macro-F1 连续 10 个 epoch 不提升则停止，避免过拟合。",
+    "类别不均衡默认先使用 class-weighted cross entropy with label smoothing，后续再对比 Focal Loss。",
+    "训练曲线数据应保存到 JSON，便于后续分析优化效果。",
+    "这是验证所有新增优化技术（Mixup/CutMix/LS/Warmup+Cosine）是否正常工作的关键任务。"
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "id": "010_siglip2_zeroshot",
+  "title": "建立 SigLIP 2 零样本 Prompt Baseline",
+  "goal": "使用 google/siglip2-so400m-patch16-384 的图文对齐能力，对验证集做 8 类情绪零样本分类，评估标签文本和 prompt 模板的语义可分性。",
+  "inputs": [
+    "SigLIP 2 模型：google/siglip2-so400m-patch16-384",
+    "验证集 CSV：outputs/splits/val.csv",
+    "AutoProcessor 或等价 SigLIP 2 图像/文本预处理",
+    "8 类英文标签和 prompt 模板"
+  ],
+  "outputs": [
+    "src/siglip2_zeroshot.py 或等价入口",
+    "outputs/reports/siglip2_so400m_zeroshot_metrics.json",
+    "outputs/reports/siglip2_so400m_prompt_details.json",
+    "outputs/reports/siglip2_so400m_zeroshot_confusion_matrix.csv"
+  ],
+  "acceptance_criteria": [
+    "能为 8 个类别构造英文 prompt，例如 a photo that evokes amusement。",
+    "默认使用 google/siglip2-so400m-patch16-384 进行零样本评估。",
+    "能对验证集输出每张图的零样本预测和类别概率。",
+    "能用统一指标函数计算 Macro-F1、Accuracy、每类指标和混淆矩阵。",
+    "报告记录模型名、checkpoint、processor、prompt 模板和类别文本。",
+    "该结果只作为语义观察和 baseline，不被标记为最终唯一提交方案。"
+  ],
+  "depends_on": [
+    "005_dataset_loader",
+    "007_metrics_report"
+  ],
+  "priority": "required",
+  "implementation_notes": [
+    "图像特征和文本特征都应归一化，再用 SigLIP 相似度得到 logits。",
+    "可支持多 prompt 模板取平均文本特征，但首版保持少量清晰模板。",
+    "如果显存不足，优先降低 batch_size 或启用 float16 推理。",
+    "如果权重下载失败，记录失败原因并将其标记为主线阻塞项，优先解决环境问题后再继续。"
+  ]
+}

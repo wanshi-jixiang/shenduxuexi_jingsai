@@ -1,0 +1,197 @@
+{
+  "project": "image_emotion_recognition_cambrian1_plan",
+  "source_document": "H:/AI/jingsai/图像情感识别比赛实现路径分析.md",
+  "optimization_source": "基于原 guihua1 规划和视觉骨干替换需求生成的三套同构规划之一",
+  "task_package_dir": "H:/AI/jingsai/guihua_cambrian1",
+  "schema": "schema.json",
+  "default_tech_stack": [
+    "Python",
+    "PyTorch",
+    "torchvision",
+    "timm",
+    "transformers",
+    "scikit-learn",
+    "pandas",
+    "Pillow",
+    "PyYAML",
+    "accelerate",
+    "safetensors"
+  ],
+  "optimization_summary": [
+    "Cambrian-1 按 SigLIP + DINOv2 双视觉塔路线规划，默认以 Cambrian-1-8B 作为可行起点。",
+    "受限标签 prompt baseline 只做语义观察，默认可提交模型来自双塔 late-fusion 分类头。",
+    "SVA、adapter 或融合层微调必须经过收益门控。"
+  ],
+  "global_constraints": [
+    "训练数据包含 8 个英文情绪类别：amusement, anger, awe, contentment, disgust, excitement, fear, sadness。",
+    "测试集包含 1391 张未标注图片，最终预测必须覆盖全部测试图片。",
+    "主评价指标采用 Macro-F1，Accuracy 只作为辅助指标。",
+    "测试图片必须按数字自然序读取，例如 1.jpg、2.jpg、10.jpg 不能按字符串顺序错位。",
+    "所有推理输入统一转换为 RGB。",
+    "提交文件必须使用 UTF-8 无 BOM 编码，不包含空行、多余空格或非法标签。",
+    "Cambrian-1 双视觉塔是唯一主线，所有新增策略都必须在同口径验证下证明收益后才保留。",
+    "所有训练任务默认启用 Mixup + CutMix + Label Smoothing + Warmup + Cosine Annealing。",
+    "视觉骨干微调阶段默认优先使用参数高效或分层学习率策略，并保存可回退的冻结特征分类头。",
+    "默认可提交结果来自双塔 late-fusion 分类头或 SVA/adapter 微调模型。"
+  ],
+  "phases": [
+    {
+      "name": "shared_foundation",
+      "description": "建立可复现的数据、标签、划分、数据集读取、评估和提交底座。",
+      "task_ids": [
+        "001_project_scaffold",
+        "002_data_audit",
+        "003_label_config",
+        "004_stratified_split",
+        "005_dataset_loader",
+        "007_metrics_report",
+        "008_submission_writer"
+      ]
+    },
+    {
+      "name": "backbone_probe",
+      "description": "优先验证 Cambrian-1 prompt 路线、双塔拆分方式和解析稳定性，尽早暴露实现风险。",
+      "task_ids": [
+        "010_cambrian1_prompt_probe"
+      ]
+    },
+    {
+      "name": "cambrian1_supervised_mainline",
+      "description": "实现主线训练增强、双塔特征缓存、late-fusion 分类头和 SVA/adapter 微调，形成可直接提交的监督模型。",
+      "task_ids": [
+        "006_augmentation_pipeline",
+        "011_cambrian1_dual_feature_cache",
+        "012_cambrian1_late_fusion_head",
+        "013_cambrian1_sva_adapter_gate"
+      ]
+    },
+    {
+      "name": "score_improvement_and_submission",
+      "description": "按收益启用高阶策略，并生成最终可提交文件。",
+      "task_ids": [
+        "014_advanced_strategy_gate",
+        "015_final_inference_package"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "001_project_scaffold",
+      "file": "tasks/001_project_scaffold.json",
+      "required": true,
+      "depends_on": []
+    },
+    {
+      "id": "002_data_audit",
+      "file": "tasks/002_data_audit.json",
+      "required": true,
+      "depends_on": [
+        "001_project_scaffold"
+      ]
+    },
+    {
+      "id": "003_label_config",
+      "file": "tasks/003_label_config.json",
+      "required": true,
+      "depends_on": [
+        "002_data_audit"
+      ]
+    },
+    {
+      "id": "004_stratified_split",
+      "file": "tasks/004_stratified_split.json",
+      "required": true,
+      "depends_on": [
+        "003_label_config"
+      ]
+    },
+    {
+      "id": "005_dataset_loader",
+      "file": "tasks/005_dataset_loader.json",
+      "required": true,
+      "depends_on": [
+        "003_label_config",
+        "004_stratified_split"
+      ]
+    },
+    {
+      "id": "006_augmentation_pipeline",
+      "file": "tasks/006_augmentation_pipeline.json",
+      "required": true,
+      "depends_on": [
+        "005_dataset_loader"
+      ]
+    },
+    {
+      "id": "007_metrics_report",
+      "file": "tasks/007_metrics_report.json",
+      "required": true,
+      "depends_on": [
+        "003_label_config"
+      ]
+    },
+    {
+      "id": "008_submission_writer",
+      "file": "tasks/008_submission_writer.json",
+      "required": true,
+      "depends_on": [
+        "003_label_config",
+        "005_dataset_loader"
+      ]
+    },
+    {
+      "id": "010_cambrian1_prompt_probe",
+      "file": "tasks/010_cambrian1_prompt_probe.json",
+      "required": true,
+      "depends_on": [
+        "005_dataset_loader",
+        "007_metrics_report"
+      ]
+    },
+    {
+      "id": "011_cambrian1_dual_feature_cache",
+      "file": "tasks/011_cambrian1_dual_feature_cache.json",
+      "required": true,
+      "depends_on": [
+        "005_dataset_loader",
+        "010_cambrian1_prompt_probe"
+      ]
+    },
+    {
+      "id": "012_cambrian1_late_fusion_head",
+      "file": "tasks/012_cambrian1_late_fusion_head.json",
+      "required": true,
+      "depends_on": [
+        "006_augmentation_pipeline",
+        "007_metrics_report",
+        "008_submission_writer",
+        "011_cambrian1_dual_feature_cache"
+      ]
+    },
+    {
+      "id": "013_cambrian1_sva_adapter_gate",
+      "file": "tasks/013_cambrian1_sva_adapter_gate.json",
+      "required": true,
+      "depends_on": [
+        "012_cambrian1_late_fusion_head"
+      ]
+    },
+    {
+      "id": "014_advanced_strategy_gate",
+      "file": "tasks/014_advanced_strategy_gate.json",
+      "required": true,
+      "depends_on": [
+        "013_cambrian1_sva_adapter_gate"
+      ]
+    },
+    {
+      "id": "015_final_inference_package",
+      "file": "tasks/015_final_inference_package.json",
+      "required": true,
+      "depends_on": [
+        "014_advanced_strategy_gate",
+        "008_submission_writer"
+      ]
+    }
+  ]
+}

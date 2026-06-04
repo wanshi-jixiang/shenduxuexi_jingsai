@@ -1,0 +1,31 @@
+{
+  "id": "002_data_audit",
+  "title": "审计训练集与测试集数据",
+  "goal": "扫描比赛数据，确认类别、样本数、测试图片数、尺寸分布、通道模式和损坏文件，为后续划分与预处理提供事实依据。",
+  "inputs": [
+    "configs/default.yaml 中的 train_dir（当前工作区应指向 H:/AI/jingsai/dataset/train/train）",
+    "configs/default.yaml 中的 test_dir（当前工作区应指向 H:/AI/jingsai/dataset/test/test）",
+    "固定类别预期：amusement, anger, awe, contentment, disgust, excitement, fear, sadness"
+  ],
+  "outputs": [
+    "outputs/audit/data_audit.json，包含类别计数、测试数量、尺寸统计、通道模式、异常文件列表",
+    "outputs/audit/data_audit.md，包含人工可读摘要和风险提示"
+  ],
+  "acceptance_criteria": [
+    "训练集识别出 8 个合法类别目录，类别名与预期完全一致。",
+    "训练图片总数统计为 3018，测试图片总数统计为 1391。",
+    "报告每个类别的样本数，并突出 disgust 等少数类风险。",
+    "报告训练集和测试集中的图像尺寸数量、宽高范围、通道模式分布。",
+    "损坏图片或无法读取图片会进入异常列表，扫描过程不会静默跳过。",
+    "审计输出能被后续任务读取，不依赖终端输出。"
+  ],
+  "depends_on": [
+    "001_project_scaffold"
+  ],
+  "priority": "required",
+  "implementation_notes": [
+    "使用 Pillow 打开图片并记录 image.mode、size，不在审计阶段做训练增强。",
+    "当前工作区数据目录存在嵌套结构：dataset/train/train/ 和 dataset/test/test/，配置时必须指向正确的子目录。",
+    "文件扩展名按 .jpg、.jpeg、.png 大小写无关处理。"
+  ]
+}

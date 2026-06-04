@@ -1,0 +1,41 @@
+{
+  "id": "011_cambrian1_dual_feature_cache",
+  "title": "缓存 Cambrian-1 SigLIP + DINOv2 双塔图像特征",
+  "goal": "按 Cambrian-1 的 SigLIP + DINOv2 多视觉塔思路，为训练集、验证集和测试集提取双塔图像特征并缓存。",
+  "inputs": [
+    "Cambrian-1-8B 视觉塔配置或可分离的 SigLIP 与 DINOv2 编码器",
+    "outputs/splits/train.csv",
+    "outputs/splits/val.csv",
+    "测试 Dataset",
+    "批大小、设备和输出目录配置"
+  ],
+  "outputs": [
+    "src/cache_cambrian1_dual_features.py 或等价入口",
+    "outputs/features/cambrian1_siglip_train_features.pt 或 .npy",
+    "outputs/features/cambrian1_dinov2_train_features.pt 或 .npy",
+    "outputs/features/cambrian1_siglip_val_features.pt 或 .npy",
+    "outputs/features/cambrian1_dinov2_val_features.pt 或 .npy",
+    "outputs/features/cambrian1_siglip_test_features.pt 或 .npy",
+    "outputs/features/cambrian1_dinov2_test_features.pt 或 .npy",
+    "outputs/features/cambrian1_dual_feature_manifest.json"
+  ],
+  "acceptance_criteria": [
+    "训练、验证、测试双塔特征数量分别与对应样本数量完全一致。",
+    "manifest 记录每条特征对应的 filepath、filename、label 信息和双塔特征维度。",
+    "SigLIP 与 DINOv2 特征顺序严格对齐，同一样本在两个特征文件中的 index 一致。",
+    "特征提取在 torch.no_grad() 下执行，视觉塔处于 eval 模式。",
+    "支持分批处理，显存不足时可以分别缓存两个视觉塔。",
+    "重复运行可以检测已有缓存并根据配置选择复用或覆盖。"
+  ],
+  "depends_on": [
+    "005_dataset_loader",
+    "010_cambrian1_prompt_probe"
+  ],
+  "priority": "required",
+  "implementation_notes": [
+    "两个视觉塔应分别使用匹配的预处理，不要共用不兼容 transform。",
+    "建议同时保存 label_id，避免后续分类头训练再次读取图片。",
+    "测试集 manifest 必须保持数字自然序，便于最终提交。",
+    "如果端到端 Cambrian-1 视觉塔难以拆分，可以用等价 SigLIP 与 DINOv2 编码器实现双塔缓存，并在 manifest 中记录来源。"
+  ]
+}

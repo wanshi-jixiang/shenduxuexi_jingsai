@@ -1,0 +1,33 @@
+{
+  "id": "005_dataset_loader",
+  "title": "实现图像数据加载与自然序测试集读取",
+  "goal": "实现训练、验证和测试数据集加载逻辑，确保图片统一 RGB 转换，并保证测试图片按数字自然序进入推理。",
+  "inputs": [
+    "outputs/splits/train.csv",
+    "outputs/splits/val.csv",
+    "测试目录：configs/default.yaml 中的 test_dir",
+    "标签映射：src/labels.py"
+  ],
+  "outputs": [
+    "src/datasets.py，包含训练/验证 Dataset、测试 Dataset、自然序排序工具",
+    "最小数据加载验证脚本或单元测试"
+  ],
+  "acceptance_criteria": [
+    "训练和验证 Dataset 返回 image、label_id、label、filepath 中的必要字段。",
+    "测试 Dataset 返回 image、filename、filepath，并不需要真实标签。",
+    "所有图片通过 PIL 打开后统一 convert('RGB')。",
+    "测试文件排序为数字自然序，前 10 个文件应为 1.jpg 到 10.jpg。",
+    "测试集长度为 1391。",
+    "数据加载遇到无法读取图片时抛出包含 filepath 的异常。"
+  ],
+  "depends_on": [
+    "003_label_config",
+    "004_stratified_split"
+  ],
+  "priority": "required",
+  "implementation_notes": [
+    "自然序排序应提取文件名中的数字作为主排序键，而不是直接字符串排序。",
+    "Dataset 不应绑定具体模型 transform，transform 从外部注入。",
+    "保留 filepath 或 filename 以便提交映射表追溯。"
+  ]
+}

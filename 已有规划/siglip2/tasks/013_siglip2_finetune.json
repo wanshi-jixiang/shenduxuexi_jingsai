@@ -1,0 +1,41 @@
+{
+  "id": "013_siglip2_finetune",
+  "title": "轻量微调 SigLIP 2 主线模型",
+  "goal": "在冻结特征分类头稳定后，使用分层学习率或 LoRA/adapter 等轻量策略微调 SigLIP 2，验证是否能进一步提升 Macro-F1。",
+  "inputs": [
+    "最佳冻结特征分类头 checkpoint：outputs/checkpoints/siglip2_so400m_head_best.pt",
+    "SigLIP 2 模型与 processor",
+    "outputs/splits/train.csv",
+    "outputs/splits/val.csv",
+    "冻结分类头验证报告",
+    "configs/default.yaml 中的 finetune_strategy、llrd_decay 或 LoRA 配置"
+  ],
+  "outputs": [
+    "src/finetune_siglip2.py 或等价入口",
+    "src/llrd_utils.py 或 src/peft_utils.py",
+    "outputs/checkpoints/siglip2_so400m_finetune_best.pt",
+    "outputs/reports/siglip2_so400m_finetune_metrics.json",
+    "outputs/reports/siglip2_so400m_finetune_vs_head.json",
+    "outputs/reports/siglip2_so400m_finetune_lr_or_adapter_config.json",
+    "outputs/submissions/siglip2_so400m_finetune_* 提交文件，仅在收益明确时生成或标记为候选"
+  ],
+  "acceptance_criteria": [
+    "默认不全量大步长微调视觉骨干，优先使用分层学习率或参数高效策略。",
+    "顶层学习率不超过分类头学习率的 1/10。",
+    "学习率调度使用 Warmup（3 epochs）+ Cosine Annealing。",
+    "损失函数使用 Label Smoothing Cross Entropy（smoothing=0.1）。",
+    "与冻结分类头使用同一 train/val 划分和同一指标函数。",
+    "仅当 Macro-F1 相比冻结分类头提升且少数类没有明显恶化时，将微调模型标记为保留。",
+    "如果验证 loss 持续上升、Macro-F1 不稳定或少数类恶化，则回退到冻结特征分类头。",
+    "对照报告明确记录保留或回退决策。"
+  ],
+  "depends_on": [
+    "012_siglip2_classifier_head"
+  ],
+  "priority": "required",
+  "implementation_notes": [
+    "SigLIP 2 模型较大，首选冻结大部分层，只开放最后若干 block、adapter 或 LoRA 参数。",
+    "显存不足时降低 batch_size、使用梯度累积或混合精度，不要跳过冻结特征分类头回退。",
+    "建议保存每层学习率或 adapter 配置到 JSON，便于后续分析。"
+  ]
+}

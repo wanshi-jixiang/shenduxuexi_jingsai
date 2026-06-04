@@ -1,0 +1,41 @@
+{
+  "id": "013_cambrian1_sva_adapter_gate",
+  "title": "门控评估 Cambrian-1 SVA 或 adapter 微调",
+  "goal": "在双塔 late-fusion 分类头稳定后，评估 Spatial Vision Aggregator、adapter 或最后融合层微调是否带来稳定收益。",
+  "inputs": [
+    "最佳 late-fusion 分类头 checkpoint：outputs/checkpoints/cambrian1_fusion_head_best.pt",
+    "Cambrian-1 双视觉塔配置",
+    "outputs/splits/train.csv",
+    "outputs/splits/val.csv",
+    "late-fusion 验证报告",
+    "configs/default.yaml 中的 sva、adapter 或 finetune_strategy 配置"
+  ],
+  "outputs": [
+    "src/finetune_cambrian1_adapter.py 或等价入口",
+    "src/cambrian1_adapter_utils.py 或等价工具",
+    "outputs/checkpoints/cambrian1_adapter_best.pt",
+    "outputs/reports/cambrian1_adapter_metrics.json",
+    "outputs/reports/cambrian1_adapter_vs_fusion_head.json",
+    "outputs/reports/cambrian1_adapter_config.json",
+    "outputs/submissions/cambrian1_adapter_* 提交文件，仅在收益明确时生成或标记为候选"
+  ],
+  "acceptance_criteria": [
+    "默认不全量微调 Cambrian-1-8B。",
+    "优先评估 SVA、adapter 或最后融合层，避免同时引入多个未验证变量。",
+    "学习率调度使用 Warmup（3 epochs）+ Cosine Annealing。",
+    "损失函数使用 Label Smoothing Cross Entropy（smoothing=0.1）。",
+    "与 late-fusion 分类头使用同一 train/val 划分和同一指标函数。",
+    "仅当 Macro-F1 相比 late-fusion 分类头提升且少数类没有明显恶化时，将微调模型标记为保留。",
+    "如果显存不足、验证 loss 持续上升或 Macro-F1 不稳定，则回退到 late-fusion 分类头。",
+    "对照报告明确记录保留或回退决策。"
+  ],
+  "depends_on": [
+    "012_cambrian1_late_fusion_head"
+  ],
+  "priority": "required",
+  "implementation_notes": [
+    "Cambrian-1 端到端训练成本高，首选冻结双视觉塔并只训练轻量模块。",
+    "显存不足时分别缓存视觉塔特征，避免强行端到端训练。",
+    "建议保存 trainable parameter 列表、融合模块配置和显存记录到 JSON。"
+  ]
+}

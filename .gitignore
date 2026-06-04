@@ -1,0 +1,49 @@
+# Dataset and large local assets
+dataset/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Conda and notebook metadata
+.ipynb_checkpoints/
+
+# Training outputs and experiment artifacts
+runs/
+outputs/
+logs/
+checkpoints/
+artifacts/
+wandb/
+mlruns/
+tensorboard/
+
+# Model files
+*.pt
+*.pth
+*.ckpt
+*.bin
+*.safetensors
+*.onnx
+
+# Data and result files
+*.csv
+*.tsv
+*.parquet
+*.npy
+*.npz
+*.pkl
+*.joblib
+submission*.json
+submission*.csv
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

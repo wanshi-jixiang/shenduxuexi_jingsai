@@ -1,0 +1,33 @@
+{
+  "id": "010_internvit6b_probe",
+  "title": "建立 InternViT-6B 加载与显存探测",
+  "goal": "验证 OpenGVLab/InternViT-6B-224px 在当前环境中的加载、预处理、批量推理和特征维度，为后续冻结特征缓存选择安全 batch_size。",
+  "inputs": [
+    "InternViT-6B 模型：OpenGVLab/InternViT-6B-224px",
+    "少量训练和验证图片样本",
+    "configs/default.yaml 中的 device、precision、batch_size 配置",
+    "统一指标和日志输出目录"
+  ],
+  "outputs": [
+    "src/probe_internvit6b.py 或等价入口",
+    "outputs/reports/internvit6b_probe.json",
+    "outputs/reports/internvit6b_preprocess_summary.json"
+  ],
+  "acceptance_criteria": [
+    "能加载模型和 image processor，并对少量图片输出特征张量。",
+    "报告记录特征维度、输入尺寸、dtype、峰值显存或显存估计。",
+    "探测至少覆盖 batch_size=1，并尝试配置中的目标 batch_size。",
+    "如果加载失败，报告记录失败阶段和错误摘要。",
+    "该任务不做文本 prompt zero-shot，因为 InternViT-6B 是视觉编码器主线。"
+  ],
+  "depends_on": [
+    "002_data_audit",
+    "003_label_config"
+  ],
+  "priority": "required",
+  "implementation_notes": [
+    "优先使用 half/bfloat16 推理降低显存压力。",
+    "不要在探测阶段训练模型，只验证可加载性和特征接口。",
+    "探测结果写入后续缓存任务可读取的建议 batch_size。"
+  ]
+}

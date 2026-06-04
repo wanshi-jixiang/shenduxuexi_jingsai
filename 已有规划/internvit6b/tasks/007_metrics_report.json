@@ -1,0 +1,33 @@
+{
+  "id": "007_metrics_report",
+  "title": "统一验证指标与报告输出",
+  "goal": "实现统一评估函数，所有模型都按同一类别顺序输出 Macro-F1、Accuracy、每类指标和混淆矩阵。",
+  "inputs": [
+    "真实标签 label_id 或 label",
+    "预测标签 label_id 或 label",
+    "可选预测概率矩阵",
+    "类别顺序：src/labels.py"
+  ],
+  "outputs": [
+    "src/metrics.py，包含 compute_metrics、save_metrics_report 或等价接口",
+    "outputs/reports/*.json，保存机器可读指标",
+    "outputs/reports/*_confusion_matrix.csv 或等价混淆矩阵文件"
+  ],
+  "acceptance_criteria": [
+    "报告包含 Macro-F1、Accuracy、每类 Precision、Recall、F1、Support。",
+    "混淆矩阵行列顺序与 src/labels.py 中类别顺序一致。",
+    "少数类指标可以单独定位，例如 disgust 的 Recall 和 F1。",
+    "输入非法标签或长度不一致时抛出明确异常。",
+    "同一输入多次运行生成一致指标。",
+    "InternViT-6B 主线及其高阶策略都使用同一个指标函数。"
+  ],
+  "depends_on": [
+    "003_label_config"
+  ],
+  "priority": "required",
+  "implementation_notes": [
+    "优先使用 sklearn.metrics.classification_report、f1_score、accuracy_score、confusion_matrix。",
+    "JSON 报告应包含模型名、配置摘要、split 文件路径和时间戳。",
+    "Macro-F1 是模型选择主指标，Accuracy 不能单独决定最佳模型。"
+  ]
+}

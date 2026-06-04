@@ -1,0 +1,44 @@
+{
+  "id": "012_internvit6b_classifier_head",
+  "title": "训练 InternViT-6B 冻结特征分类头",
+  "goal": "基于已缓存的 InternViT-6B 图像特征训练 8 类线性头或小 MLP 分类头，作为默认可提交主线模型。",
+  "inputs": [
+    "outputs/features/internvit6b_train_features.pt 或 .npy",
+    "outputs/features/internvit6b_val_features.pt 或 .npy",
+    "outputs/features/internvit6b_feature_manifest.json",
+    "类别权重或样本权重配置",
+    "configs/default.yaml 中的训练配置"
+  ],
+  "outputs": [
+    "src/train_internvit6b_head.py 或等价入口",
+    "outputs/checkpoints/internvit6b_head_best.pt",
+    "outputs/reports/internvit6b_head_metrics.json",
+    "outputs/reports/internvit6b_head_confusion_matrix.csv",
+    "outputs/reports/internvit6b_head_training_curves.json",
+    "outputs/submissions/internvit6b_head_* 提交文件"
+  ],
+  "acceptance_criteria": [
+    "分类头输出维度为 8，类别顺序与 src/labels.py 一致。",
+    "输入特征维度从 feature_manifest.json 读取，不硬编码。",
+    "训练使用 Macro-F1 选择最佳 checkpoint。",
+    "损失函数使用 Label Smoothing Cross Entropy（smoothing=0.1）。",
+    "学习率调度使用 Warmup（5 epochs）+ Cosine Annealing。",
+    "报告与探测、缓存阶段使用同一验证划分和同一指标函数。",
+    "分类头必须形成首个可直接提交的监督模型；若少数类出现明显塌陷，需先修正权重、采样或头结构再进入微调。",
+    "disgust 等少数类不出现系统性召回塌陷。",
+    "能对测试特征生成 1391 条预测并通过提交校验。"
+  ],
+  "depends_on": [
+    "006_augmentation_pipeline",
+    "007_metrics_report",
+    "008_submission_writer",
+    "011_internvit6b_feature_cache"
+  ],
+  "priority": "required",
+  "implementation_notes": [
+    "特征已经是缓存的向量，Mixup/CutMix 可以直接在特征空间中应用。",
+    "默认从线性分类头开始，小 MLP 只作为对照。",
+    "类别不均衡默认使用 class-weighted cross entropy with label smoothing，可对比 Focal Loss。",
+    "训练报告应记录分类头类型、学习率、epoch、batch_size 和类别平衡策略。"
+  ]
+}

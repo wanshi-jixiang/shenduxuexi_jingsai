@@ -1,0 +1,41 @@
+{
+  "id": "012_openclip_classifier_head",
+  "title": "训练 OpenCLIP 冻结特征分类头（集成优化）",
+  "goal": "基于已缓存的 OpenCLIP 图像特征训练 8 类线性头或小 MLP 分类头，作为默认可提交主线模型。集成 Mixup、CutMix、Label Smoothing 和 Warmup+Cosine 学习率调度。",
+  "inputs": [
+    "outputs/features/openclip_vit_l14_train_features.pt 或 .npy",
+    "outputs/features/openclip_vit_l14_val_features.pt 或 .npy",
+    "outputs/features/openclip_feature_manifest.json",
+    "类别权重或样本权重配置",
+    "EfficientNet 基线验证报告",
+    "configs/default.yaml 中的训练配置"
+  ],
+  "outputs": [
+    "src/train_openclip_head.py 或等价入口",
+    "outputs/checkpoints/openclip_vit_l14_head_best.pt",
+    "outputs/reports/openclip_vit_l14_head_metrics.json",
+    "outputs/reports/openclip_vit_l14_head_confusion_matrix.csv",
+    "outputs/reports/openclip_vit_l14_head_training_curves.json",
+    "outputs/submissions/openclip_vit_l14_head_* 提交文件"
+  ],
+  "acceptance_criteria": [
+    "分类头输出维度为 8，类别顺序与 src/labels.py 一致。",
+    "输入特征维度与 ViT-L-14 输出一致（1024 维）。",
+    "训练使用 Macro-F1 选择最佳 checkpoint。",
+    "损失函数使用 Label Smoothing Cross Entropy（smoothing=0.1）。",
+    "学习率调度使用 Warmup（5 epochs）+ Cosine Annealing。",
+    "报告与 EfficientNet 基线使用同一验证划分和同一指标函数。",
+    "Macro-F1 不弱于 EfficientNet 工程基线，若弱于基线需在报告中标记原因并保留基线兜底。",
+    "disgust 等少数类不出现系统性召回塌陷。",
+    "能对测试特征生成 1391 条预测并通过提交校验。"
+  ],
+  "depends_on": ["009_efficientnet_baseline", "011_openclip_feature_cache"],
+  "priority": "required",
+  "implementation_notes": [
+    "特征已经是缓存的向量，Mixup/CutMix 可以直接在特征空间中应用（对特征向量进行线性插值）。",
+    "默认从线性分类头开始，小 MLP 只作为对照，不要一次引入复杂结构。",
+    "类别不均衡默认使用 class-weighted cross entropy with label smoothing，可对比 Focal Loss。",
+    "训练报告应记录分类头类型、学习率、epoch、batch_size 和类别平衡策略。",
+    "如果 ViT-L-14 特征缓存失败，可以回退到 ViT-B-16 特征。"
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "id": "012_cambrian1_late_fusion_head",
+  "title": "训练 Cambrian-1 双塔 late-fusion 分类头",
+  "goal": "基于已缓存的 SigLIP 与 DINOv2 双塔图像特征训练 late-fusion 8 类分类头，作为默认可提交主线模型。",
+  "inputs": [
+    "outputs/features/cambrian1_*_train_features.pt 或 .npy",
+    "outputs/features/cambrian1_*_val_features.pt 或 .npy",
+    "outputs/features/cambrian1_dual_feature_manifest.json",
+    "类别权重或样本权重配置",
+    "configs/default.yaml 中的训练配置"
+  ],
+  "outputs": [
+    "src/train_cambrian1_fusion_head.py 或等价入口",
+    "outputs/checkpoints/cambrian1_fusion_head_best.pt",
+    "outputs/reports/cambrian1_fusion_head_metrics.json",
+    "outputs/reports/cambrian1_fusion_head_confusion_matrix.csv",
+    "outputs/reports/cambrian1_fusion_head_training_curves.json",
+    "outputs/submissions/cambrian1_fusion_head_* 提交文件"
+  ],
+  "acceptance_criteria": [
+    "分类头输出维度为 8，类别顺序与 src/labels.py 一致。",
+    "输入特征维度从 dual_feature_manifest.json 读取，不硬编码。",
+    "late-fusion 至少支持 concat + MLP，并记录是否使用单塔消融对照。",
+    "训练使用 Macro-F1 选择最佳 checkpoint。",
+    "损失函数使用 Label Smoothing Cross Entropy（smoothing=0.1）。",
+    "学习率调度使用 Warmup（5 epochs）+ Cosine Annealing。",
+    "报告与单塔消融对照使用同一验证划分和同一指标函数。",
+    "融合模型必须不弱于任一单塔分类头，否则报告中标记回退到最佳单塔而不是继续进入微调。",
+    "能对测试特征生成 1391 条预测并通过提交校验。"
+  ],
+  "depends_on": [
+    "006_augmentation_pipeline",
+    "007_metrics_report",
+    "008_submission_writer",
+    "011_cambrian1_dual_feature_cache"
+  ],
+  "priority": "required",
+  "implementation_notes": [
+    "先训练 SigLIP-only、DINOv2-only、concat-fusion 三个轻量头做消融，再决定默认提交候选。",
+    "特征已经是缓存的向量，Mixup/CutMix 可以直接在融合特征空间中应用。",
+    "类别不均衡默认使用 class-weighted cross entropy with label smoothing。",
+    "训练报告应记录融合方式、学习率、epoch、batch_size 和类别平衡策略。"
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "id": "013_internvit6b_peft_gate",
+  "title": "门控评估 InternViT-6B LoRA、adapter 或末层微调",
+  "goal": "在冻结特征分类头稳定后，评估 LoRA、adapter 或最后若干视觉层微调是否带来稳定收益，并严格控制显存和过拟合风险。",
+  "inputs": [
+    "最佳冻结特征分类头 checkpoint：outputs/checkpoints/internvit6b_head_best.pt",
+    "InternViT-6B 模型与 image processor",
+    "outputs/splits/train.csv",
+    "outputs/splits/val.csv",
+    "冻结分类头验证报告",
+    "configs/default.yaml 中的 finetune_strategy、adapter、LoRA 或 last_blocks 配置"
+  ],
+  "outputs": [
+    "src/finetune_internvit6b_peft.py 或等价入口",
+    "src/peft_utils.py 或等价工具",
+    "outputs/checkpoints/internvit6b_peft_best.pt",
+    "outputs/reports/internvit6b_peft_metrics.json",
+    "outputs/reports/internvit6b_peft_vs_head.json",
+    "outputs/reports/internvit6b_peft_config.json",
+    "outputs/submissions/internvit6b_peft_* 提交文件，仅在收益明确时生成或标记为候选"
+  ],
+  "acceptance_criteria": [
+    "默认不全量微调 InternViT-6B。",
+    "优先顺序为 LoRA 或 adapter，其次才是最后若干 block 微调。",
+    "学习率调度使用 Warmup（3 epochs）+ Cosine Annealing。",
+    "损失函数使用 Label Smoothing Cross Entropy（smoothing=0.1）。",
+    "与冻结分类头使用同一 train/val 划分和同一指标函数。",
+    "仅当 Macro-F1 相比冻结分类头提升且少数类没有明显恶化时，将参数高效微调模型标记为保留。",
+    "如果显存不足、验证 loss 持续上升或 Macro-F1 不稳定，则回退到冻结特征分类头。",
+    "对照报告明确记录保留或回退决策。"
+  ],
+  "depends_on": [
+    "012_internvit6b_classifier_head"
+  ],
+  "priority": "required",
+  "implementation_notes": [
+    "InternViT-6B 参数量大，首选冻结主干并只训练轻量模块。",
+    "显存不足时降低 batch_size、使用梯度累积或混合精度。",
+    "建议保存 trainable parameter 列表和比例到 JSON，便于复查。"
+  ]
+}

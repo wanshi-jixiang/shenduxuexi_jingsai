@@ -1,0 +1,36 @@
+{
+  "id": "008_submission_writer",
+  "title": "生成并校验双轨提交文件",
+  "goal": "实现提交文件导出和严格校验，同时生成纯标签版与 filename label 版，并保留可追溯映射表。",
+  "inputs": [
+    "测试文件名列表，必须为数字自然序",
+    "预测标签列表",
+    "可选预测概率矩阵",
+    "合法类别列表：src/labels.py"
+  ],
+  "outputs": [
+    "outputs/submissions/test_labels_only.txt，每行一个英文标签",
+    "outputs/submissions/test_filename_label.txt，每行 filename label",
+    "outputs/submissions/prediction_mapping.csv，包含 filename、pred_label、pred_id、probabilities 或 max_probability",
+    "提交校验函数或脚本"
+  ],
+  "acceptance_criteria": [
+    "两个提交文本文件均为 1391 行。",
+    "所有输出标签都属于 8 个合法英文类别。",
+    "文件顺序与测试 Dataset 的数字自然序一致。",
+    "输出文件使用 UTF-8 无 BOM 编码。",
+    "文本文件不存在空行、多余首尾空格或非法字符。",
+    "prediction_mapping.csv 能重新生成两个提交文本且内容一致。",
+    "格式选择可以由配置控制，正式提交前可只复制官方要求的版本。"
+  ],
+  "depends_on": [
+    "003_label_config",
+    "005_dataset_loader"
+  ],
+  "priority": "required",
+  "implementation_notes": [
+    "规划文档指出官方说明与示例存在格式歧义，因此必须双轨输出。",
+    "校验函数应在写文件后重新读取产物进行检查。",
+    "不要在提交文件中输出数字 id 或概率。"
+  ]
+}

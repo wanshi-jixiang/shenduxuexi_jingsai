@@ -1,0 +1,40 @@
+{
+  "id": "006_augmentation_pipeline",
+  "title": "实现 Mixup + CutMix + Label Smoothing 增强管线",
+  "goal": "为 Cambrian-1 双视觉塔主线实现完整的预处理与训练增强管线，包含双塔匹配的 eval preprocess、可控训练增强、Mixup、CutMix 和 Label Smoothing。",
+  "inputs": [
+    "configs/default.yaml 中的增强配置：mixup_alpha、cutmix_alpha、label_smoothing",
+    "src/datasets.py 暴露的 Dataset transform 注入点",
+    "Cambrian-1 双视觉塔 模型名、输入尺寸以及 SigLIP 与 DINOv2 各自的预处理参数"
+  ],
+  "outputs": [
+    "src/transforms.py，包含 build_backbone_train_transform、build_backbone_eval_transform 或等价接口",
+    "src/augmentation.py，包含 MixupCutMixCollator、Mixup、CutMix 实现",
+    "src/losses.py，包含 LabelSmoothingCrossEntropy、ClassWeightedCEWithSmoothing 实现",
+    "预处理与增强配置说明文档"
+  ],
+  "acceptance_criteria": [
+    "Cambrian-1 双视觉塔 分支为 SigLIP 与 DINOv2 分别提供与预训练权重匹配的确定性 preprocess。",
+    "Mixup 实现支持 alpha 参数控制混合强度，默认 alpha=0.2。",
+    "CutMix 实现支持 alpha 参数控制区域替换强度，默认 alpha=1.0。",
+    "Mixup 和 CutMix 在每个 batch 中随机选择一种或按概率切换，而不是同时应用。",
+    "Label Smoothing 实现支持 smoothing 参数，默认 smoothing=0.1。",
+    "训练增强只包含温和水平翻转、轻度亮度/对比度/饱和度扰动、轻度缩放等不破坏情绪语义的操作。",
+    "不使用垂直翻转、极端颜色扰动、大面积遮挡主体或强随机裁剪。",
+    "验证和测试 transform 不包含随机增强和 Mixup/CutMix。",
+    "prompt 探测、双塔缓存和微调阶段都能明确选择自己的 preprocess，不混用训练增强和评估预处理。"
+  ],
+  "depends_on": [
+    "005_dataset_loader"
+  ],
+  "priority": "required",
+  "implementation_notes": [
+    "Mixup 和 CutMix 应在 DataLoader 的 collate_fn 中实现，而不是在 Dataset 的 __getitem__ 中。",
+    "MixupCutMixCollator 应接受 training 标志，验证时自动禁用。",
+    "Label Smoothing 可以集成到损失函数中，也可以作为独立模块。推荐集成到损失函数。",
+    "Mixup/CutMix 的标签混合需要配合 Label Smoothing 使用：先生成软标签，再平滑。",
+    "Cambrian-1 双视觉塔 的验证和推理阶段必须使用与模型来源一致的确定性预处理；训练阶段加入增强时需谨慎对齐两塔输入尺寸和归一化。",
+    "若端到端 Cambrian-1 preprocess 难以直接复用，需分别定义 SigLIP 与 DINOv2 的 eval preprocess。",
+    "不要为了复用代码混淆训练增强和评估预处理，也不要让两塔错误共用不兼容 transform。"
+  ]
+}
