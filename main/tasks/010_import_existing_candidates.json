@@ -1,0 +1,45 @@
+{
+  "id": "010_import_existing_candidates",
+  "title": "导入已有 Cambrian/SigLIP2/OpenCLIP 候选",
+  "goal": "将当前已实现并有分数记录的 Cambrian、SigLIP2、OpenCLIP 候选结果纳入 main 路线，作为融合锚点和历史对照。",
+  "inputs": [
+    "已有实现产生的 checkpoints、metrics、validation probabilities 或 test probabilities",
+    "已有规划/openclip、已有规划/siglip2、已有规划/cambrian1",
+    "当前已知分数：OpenCLIP 约 72，SigLIP2 head/finetune 约 71，Cambrian late-fusion 约 73",
+    "outputs/main/folds/single_val.csv 和 test_manifest.csv"
+  ],
+  "outputs": [
+    "outputs/main/features/existing_candidates/candidate_registry.json",
+    "outputs/main/oof/existing_<candidate_id>_val_probs.npy 或缺失说明",
+    "outputs/main/fusion/existing_<candidate_id>_test_probs.npy 或缺失说明",
+    "outputs/main/reports/existing_candidates_import_report.json"
+  ],
+  "execution_steps": [
+    "收集已有模型的 metrics.json、confusion matrix、validation probability 和 test probability 文件路径。",
+    "如果已有结果只有 test.txt 或 argmax 标签，记录为弱候选，不参与概率融合，只用于提交对照。",
+    "如果已有结果包含验证概率，检查其样本顺序是否与当前 single_val.csv 一致；不一致时禁止直接融合。",
+    "如果已有结果包含测试概率，检查其测试顺序是否为 1.jpg 到 1391.jpg 数字自然序。",
+    "为每个候选生成 candidate_registry 条目，记录模型名、分数、训练划分、是否可用于 OOF 融合、是否可用于 test 融合。",
+    "对 Cambrian 候选额外记录 SigLIP/DINO 分支是否做过单塔消融，以及当前 DINO 是否存在疑问。"
+  ],
+  "acceptance_criteria": [
+    "import_report 明确列出每个已有候选能否用于概率融合、不能使用的原因和可用文件路径。",
+    "任何样本顺序无法确认的概率文件不得进入融合。",
+    "Cambrian 73 分候选作为当前 best anchor 写入 registry。",
+    "该任务不修改已有候选原文件，只复制或引用到 outputs/main。"
+  ],
+  "depends_on": [
+    "003_metric_submission_contract"
+  ],
+  "priority": "required",
+  "resource_profile": {
+    "gpu_memory_gb": "0",
+    "batch_size_hint": "不涉及训练",
+    "runtime_notes": "主要是文件检查和结果登记。"
+  },
+  "implementation_notes": [
+    "已有结果若划分口径不同，可作为最终 test 融合参考，但不能冒充同口径 OOF。",
+    "如果缺少概率文件，应优先安排重新推理输出概率，而不是只使用标签投票。",
+    "记录历史分数时标明是线上/外部得分还是本地验证得分。"
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "id": "019_expert_override_gate",
+  "title": "专家覆盖门控",
+  "goal": "基于 OOF 模拟搜索专家触发规则，只在能提升全局 Macro-F1 且风险可控时覆盖主融合预测。",
+  "inputs": [
+    "outputs/main/fusion/oof_calibrated_probs.npy",
+    "outputs/main/fusion/test_calibrated_probs.npy",
+    "outputs/main/experts/*_oof_probs.npy",
+    "outputs/main/experts/*_test_probs.npy",
+    "outputs/main/oof/*_oof_labels.npy",
+    "src/main_metrics.py"
+  ],
+  "outputs": [
+    "outputs/main/fusion/expert_gate_config.json",
+    "outputs/main/fusion/oof_expert_gated_probs.npy",
+    "outputs/main/fusion/test_expert_gated_probs.npy",
+    "outputs/main/reports/expert_gate_metrics.json",
+    "outputs/main/reports/expert_override_cases.csv"
+  ],
+  "execution_steps": [
+    "读取校准后的主融合 OOF 概率和专家 OOF 概率。",
+    "为每个专家定义候选触发规则：主模型目标类概率低但 margin 小、专家目标类概率高、主模型预测在混淆集合内。",
+    "在 OOF 上网格搜索每个专家的阈值，目标为全局 Macro-F1，而不是专家子任务 F1。",
+    "按顺序测试单专家、双专家、三专家组合，记录每个组合的全局 Macro-F1、每类 F1 和覆盖样本数。",
+    "选择最小且收益明确的专家组合；若收益低于 0.5 个百分点或方差高，则不启用覆盖。",
+    "将选定规则应用到 test_calibrated_probs 和专家 test 概率，生成 test_expert_gated_probs。",
+    "输出 override_cases.csv，记录 OOF 中被覆盖样本的原预测、新预测、真实标签和专家置信度。"
+  ],
+  "acceptance_criteria": [
+    "expert_gate_metrics.json 中专家覆盖后的 OOF Macro-F1 高于覆盖前，否则回退到校准主融合。",
+    "expert_gate_config.json 记录每个专家是否启用、阈值、混淆集合和覆盖顺序。",
+    "覆盖样本数不能异常过大；若某专家覆盖大量头部类样本，必须重新收紧阈值。",
+    "test_expert_gated_probs.npy 维度为 [1391, 8]，且可直接用于最终提交或伪标签。"
+  ],
+  "depends_on": [
+    "017_macro_f1_calibration",
+    "018_tail_confusion_experts"
+  ],
+  "priority": "required",
+  "resource_profile": {
+    "gpu_memory_gb": "0",
+    "batch_size_hint": "不涉及 GPU",
+    "runtime_notes": "CPU 上搜索阈值和规则。"
+  },
+  "implementation_notes": [
+    "专家门控的原则是少量高置信覆盖，不是重写主模型。",
+    "优先启用 disgust 专家，再考虑 contentment 和 excitement。",
+    "如果 OOF 提升只来自极少数样本且不稳定，最终提交不要采用专家覆盖。"
+  ]
+}

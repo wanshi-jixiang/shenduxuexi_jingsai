@@ -1,0 +1,47 @@
+{
+  "id": "006_cache_dinov3_vitl_features",
+  "title": "缓存 DINOv3 ViT-L 特征",
+  "goal": "缓存 DINOv3 ViT-L 的冻结视觉特征，补充 CLIP 系模型不擅长的场景、构图和非语言化视觉表征。",
+  "inputs": [
+    "src/cache_features_main.py",
+    "outputs/main/folds/single_train.csv",
+    "outputs/main/folds/single_val.csv",
+    "outputs/main/folds/test_manifest.csv",
+    "configs/main.yaml 中 dinov3_vitl16 配置"
+  ],
+  "outputs": [
+    "outputs/main/features/dinov3_vitl16/single_train_features.pt",
+    "outputs/main/features/dinov3_vitl16/single_val_features.pt",
+    "outputs/main/features/dinov3_vitl16/test_features.pt",
+    "outputs/main/features/dinov3_vitl16/manifest.json",
+    "outputs/main/reports/dinov3_vitl16_cache_report.json"
+  ],
+  "execution_steps": [
+    "加载 facebook/dinov3-vitl16-pretrain-lvd1689m 或当前环境可用的官方等价模型。",
+    "确认使用 DINOv3 官方 processor/transform；不要套用 CLIP mean/std。",
+    "提取 class token 或 pooled output；如果模型返回 register tokens，明确排除或按官方建议池化。",
+    "先用 batch_size=4 试跑 32 张样本，记录显存；稳定后尝试 batch_size=8。",
+    "缓存 single_train、single_val 和 test 特征。",
+    "检查特征无 NaN、无全零向量，并记录 feature_dim 和池化方式。"
+  ],
+  "acceptance_criteria": [
+    "manifest 中明确记录 DINOv3 特征来自 class token、pooled output 或指定池化方式。",
+    "特征数量与对应 CSV 行数一致。",
+    "cache_report 中记录实际输入分辨率、batch_size、峰值显存和缓存耗时。",
+    "后续单模型 head 能单独训练 DINOv3-only 模型。"
+  ],
+  "depends_on": [
+    "004_feature_cache_framework"
+  ],
+  "priority": "required",
+  "resource_profile": {
+    "gpu_memory_gb": "预计 10-22",
+    "batch_size_hint": "先 4，稳定后 8，OOM 时 2 或 1",
+    "runtime_notes": "DINOv3 ViT-L 是主力互补模型，优先级高于 ConvNeXt-L。"
+  },
+  "implementation_notes": [
+    "重点避免把 DINOv3 当成 CLIP 模型错误归一化。",
+    "如果 448 输入 OOM，先使用 336 或模型默认尺寸完成主缓存。",
+    "该任务需要在报告中说明 DINOv3 是否真正参与后续融合。"
+  ]
+}

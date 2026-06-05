@@ -1,0 +1,48 @@
+{
+  "id": "002_data_split_and_audit",
+  "title": "数据审计与固定划分",
+  "goal": "确认训练/测试数据、类别分布、图像模式和尺寸风险，并生成单 split 与 5 折分层划分供所有模型共享。",
+  "inputs": [
+    "dataset/train/train/<label>/*.jpg",
+    "dataset/test/test/*.jpg",
+    "configs/main.yaml 中的类别顺序和随机种子"
+  ],
+  "outputs": [
+    "outputs/main/reports/data_audit.json",
+    "outputs/main/folds/single_train.csv",
+    "outputs/main/folds/single_val.csv",
+    "outputs/main/folds/fold_0_train.csv 到 fold_4_train.csv",
+    "outputs/main/folds/fold_0_val.csv 到 fold_4_val.csv",
+    "outputs/main/folds/test_manifest.csv"
+  ],
+  "execution_steps": [
+    "遍历训练目录，生成 filepath、filename、label、label_id、width、height、mode 字段。",
+    "遍历测试目录，按文件名数字自然序生成 test_manifest.csv，字段为 filepath、filename、numeric_id。",
+    "统计每类样本数，确认总数为 3018，测试总数为 1391。",
+    "统计图像 mode、尺寸范围、短边小于 128 的样本、无法读取的样本，并写入 data_audit.json。",
+    "用 StratifiedShuffleSplit 生成一个固定单 split，建议 val_size=0.2，random_state=42。",
+    "用 StratifiedKFold 生成 5 折划分，确保每折类别比例接近全量分布。",
+    "检查所有 split 中 label_id 与 configs/main.yaml 类别顺序一致。"
+  ],
+  "acceptance_criteria": [
+    "data_audit.json 中训练总数为 3018，测试总数为 1391。",
+    "test_manifest.csv 第一行对应 1.jpg，最后一行对应 1391.jpg。",
+    "每个 fold 的 train 与 val 无重叠，5 个 val 合并后覆盖全部训练样本一次。",
+    "所有 CSV 均包含 filepath、label、label_id 或测试 numeric_id 所需字段。",
+    "审计报告明确记录灰度图、小尺寸图和读取异常；若无异常也写明数量为 0。"
+  ],
+  "depends_on": [
+    "001_project_foundation"
+  ],
+  "priority": "required",
+  "resource_profile": {
+    "gpu_memory_gb": "0",
+    "batch_size_hint": "不涉及训练",
+    "runtime_notes": "CPU 和 Pillow 即可完成。"
+  },
+  "implementation_notes": [
+    "所有图像读取时用 PIL.Image.open(path)，审计阶段不改变原文件。",
+    "测试集排序必须用 int(Path(filename).stem)，不要用字符串排序。",
+    "单 split 用于快速筛选，5 折用于最终 OOF 融合。"
+  ]
+}

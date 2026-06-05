@@ -1,0 +1,47 @@
+{
+  "id": "009_cache_convnext_features",
+  "title": "缓存 ConvNeXt 系局部纹理特征",
+  "goal": "缓存 DINOv3 ConvNeXt-L 或 ConvNeXtV2-L 384 特征，作为 ViT/CLIP 特征之外的局部纹理、色彩和主体细节互补。",
+  "inputs": [
+    "src/cache_features_main.py",
+    "outputs/main/folds/single_train.csv",
+    "outputs/main/folds/single_val.csv",
+    "outputs/main/folds/test_manifest.csv",
+    "configs/main.yaml 中 convnext 备选配置"
+  ],
+  "outputs": [
+    "outputs/main/features/convnext_l/single_train_features.pt",
+    "outputs/main/features/convnext_l/single_val_features.pt",
+    "outputs/main/features/convnext_l/test_features.pt",
+    "outputs/main/features/convnext_l/manifest.json",
+    "outputs/main/reports/convnext_l_cache_report.json"
+  ],
+  "execution_steps": [
+    "优先尝试 DINOv3 ConvNeXt-L；若当前环境加载困难，改用 timm 中 ConvNeXtV2-L 384 的强预训练权重。",
+    "确认使用该模型对应的 ImageNet 或官方 transform，不与 CLIP/DINOv3 ViT transform 混用。",
+    "以 fp16 或 bf16、eval、no_grad 运行，batch_size 从 8 开始，稳定后尝试 16。",
+    "缓存 single_train、single_val 和 test 特征。",
+    "输出 cache_report，记录实际模型名、权重来源、输入尺寸、feature_dim、batch_size 和峰值显存。",
+    "若该模型后续单模型 Macro-F1 低但错误分布互补，仍保留为融合候选。"
+  ],
+  "acceptance_criteria": [
+    "ConvNeXt 特征数量与对应 CSV 行数一致。",
+    "manifest 中明确记录使用的是 DINOv3 ConvNeXt-L 还是 ConvNeXtV2-L。",
+    "特征无 NaN、无全零向量，可被单模型 head 训练任务读取。",
+    "如果该任务失败，必须输出失败报告，不阻塞主线模型融合。"
+  ],
+  "depends_on": [
+    "004_feature_cache_framework"
+  ],
+  "priority": "recommended",
+  "resource_profile": {
+    "gpu_memory_gb": "预计 6-16",
+    "batch_size_hint": "先 8，稳定后 16，OOM 时 4",
+    "runtime_notes": "该模型不是主线阻塞项，但很适合补充局部纹理互补。"
+  },
+  "implementation_notes": [
+    "ConvNeXt 的价值主要在融合互补，不要求单模型超过 DINOv3 ViT-L。",
+    "如果两个 ConvNeXt 候选都可跑，优先保留 OOF 表现更好或错误互补更强的一支。",
+    "不要为该任务引入端到端微调。"
+  ]
+}
