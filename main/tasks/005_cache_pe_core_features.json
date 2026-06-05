@@ -1,0 +1,47 @@
+{
+  "id": "005_cache_pe_core_features",
+  "title": "缓存 PE-Core-L14-336 特征",
+  "goal": "缓存 facebook/PE-Core-L14-336 的 train、val、test 和后续 5 折特征，作为新路线的 CLIP-like 语义主力。",
+  "inputs": [
+    "src/cache_features_main.py",
+    "outputs/main/folds/single_train.csv",
+    "outputs/main/folds/single_val.csv",
+    "outputs/main/folds/test_manifest.csv",
+    "configs/main.yaml 中 pe_core_l14_336 配置"
+  ],
+  "outputs": [
+    "outputs/main/features/pe_core_l14_336/single_train_features.pt",
+    "outputs/main/features/pe_core_l14_336/single_val_features.pt",
+    "outputs/main/features/pe_core_l14_336/test_features.pt",
+    "outputs/main/features/pe_core_l14_336/manifest.json",
+    "outputs/main/reports/pe_core_l14_336_cache_report.json"
+  ],
+  "execution_steps": [
+    "加载 facebook/PE-Core-L14-336，并确认使用模型卡对应的 image processor 或 transform。",
+    "在 fp16 或 bf16、eval、torch.no_grad 下先用 batch_size=8 试跑 32 张样本。",
+    "若显存低于 20GB 且无 OOM，将 batch_size 提高到 16；若 OOM 则降到 4 或 2。",
+    "缓存 single_train、single_val 和 test 特征，并记录每个 split 的样本数量。",
+    "确认 test_features 的顺序与 test_manifest.csv 的 1.jpg 到 1391.jpg 一致。",
+    "输出 cache_report，记录实际 batch_size、峰值显存、feature_dim、耗时和是否复用缓存。"
+  ],
+  "acceptance_criteria": [
+    "single_train、single_val、test 特征数量分别等于对应 CSV 行数。",
+    "manifest 中 model_id 为 pe_core_l14_336，输入尺寸为 336 或模型实际要求尺寸。",
+    "cache_report 中无 OOM、无读取失败、无 NaN 特征。",
+    "特征可被 011_train_single_feature_heads 直接读取。"
+  ],
+  "depends_on": [
+    "004_feature_cache_framework"
+  ],
+  "priority": "required",
+  "resource_profile": {
+    "gpu_memory_gb": "预计 8-18",
+    "batch_size_hint": "先 8，稳定后 16，OOM 时 4 或 2",
+    "runtime_notes": "24GB 下应作为首批缓存模型，速度和收益平衡较好。"
+  },
+  "implementation_notes": [
+    "该模型是 EVA-CLIP-18B 的轻量替代之一，不做微调。",
+    "如果 transformers 版本不支持该模型，记录失败原因并改用可加载的 PE-Core 等价实现。",
+    "缓存失败不应阻塞 DINOv3 和 InternViT 缓存，但最终融合需记录缺失。"
+  ]
+}

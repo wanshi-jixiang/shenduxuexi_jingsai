@@ -1,0 +1,45 @@
+{
+  "id": "003_metric_submission_contract",
+  "title": "指标、报告和提交格式契约",
+  "goal": "建立 Macro-F1 评估、混淆矩阵、概率保存和 test.txt 生成的统一接口，防止不同执行者指标口径不一致。",
+  "inputs": [
+    "outputs/main/folds/single_val.csv",
+    "outputs/main/folds/test_manifest.csv",
+    "configs/main.yaml 中的类别列表"
+  ],
+  "outputs": [
+    "src/main_metrics.py 或等价评估模块",
+    "src/main_submission.py 或等价提交模块",
+    "outputs/main/reports/metric_contract.json",
+    "outputs/main/submissions/submission_format_check_example.txt"
+  ],
+  "execution_steps": [
+    "实现 evaluate_predictions(y_true, y_prob, class_names)，输出 macro_f1、accuracy、per_class_precision、per_class_recall、per_class_f1 和 confusion_matrix。",
+    "实现 save_probability_artifacts(y_prob, manifest, output_dir)，保存概率矩阵、预测标签、样本 manifest 和指标报告。",
+    "实现 write_test_txt(test_manifest, y_pred, class_names, path)，严格按 test_manifest 的 numeric_id 顺序写每行一个标签。",
+    "实现 validate_submission(path)，检查行数为 1391、无空行、无多余空格、标签合法。",
+    "用虚拟预测生成一次 submission_format_check_example.txt 并通过 validate_submission。",
+    "将指标函数和提交函数的输入输出字段写入 metric_contract.json。"
+  ],
+  "acceptance_criteria": [
+    "Macro-F1 使用 sklearn.metrics.f1_score(..., average='macro') 或等价实现。",
+    "所有模型报告使用同一个 evaluate_predictions 接口。",
+    "提交校验能捕获行数错误、非法标签、空行和测试顺序错位。",
+    "metric_contract.json 说明概率矩阵维度为 [n_samples, 8]，类别顺序固定。"
+  ],
+  "depends_on": [
+    "001_project_foundation",
+    "002_data_split_and_audit"
+  ],
+  "priority": "required",
+  "resource_profile": {
+    "gpu_memory_gb": "0",
+    "batch_size_hint": "不涉及训练",
+    "runtime_notes": "CPU 即可完成。"
+  },
+  "implementation_notes": [
+    "提交文件编码使用 UTF-8 无 BOM。",
+    "每个模型必须保存概率而不只保存 argmax，后续融合依赖概率。",
+    "不要把示例 dataset/test.txt 当作真实提交输入。"
+  ]
+}

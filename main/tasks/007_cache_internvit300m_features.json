@@ -1,0 +1,47 @@
+{
+  "id": "007_cache_internvit300m_features",
+  "title": "缓存 InternViT-300M-448px 特征",
+  "goal": "使用 24GB 可行的 InternViT-300M-448px 作为 InternViT-6B 的高分辨率替代，缓存图像细节特征。",
+  "inputs": [
+    "src/cache_features_main.py",
+    "outputs/main/folds/single_train.csv",
+    "outputs/main/folds/single_val.csv",
+    "outputs/main/folds/test_manifest.csv",
+    "configs/main.yaml 中 internvit_300m_448 配置"
+  ],
+  "outputs": [
+    "outputs/main/features/internvit_300m_448/single_train_features.pt",
+    "outputs/main/features/internvit_300m_448/single_val_features.pt",
+    "outputs/main/features/internvit_300m_448/test_features.pt",
+    "outputs/main/features/internvit_300m_448/manifest.json",
+    "outputs/main/reports/internvit_300m_448_cache_report.json"
+  ],
+  "execution_steps": [
+    "加载 OpenGVLab/InternViT-300M-448px 或可用等价 checkpoint。",
+    "使用其官方 448 输入 processor/transform，并确认图像统一 convert('RGB')。",
+    "先用 batch_size=2 试跑 32 张样本，稳定后尝试 4 或 8。",
+    "缓存 single_train、single_val 和 test 特征。",
+    "记录 448 输入下的小尺寸图处理方式，确认没有因过度 resize 造成读取错误。",
+    "输出 cache_report，记录峰值显存、feature_dim、输入尺寸和实际 batch_size。"
+  ],
+  "acceptance_criteria": [
+    "InternViT-300M 特征数量与 CSV 行数一致。",
+    "test 特征顺序严格对应 test_manifest.csv。",
+    "cache_report 中无 OOM、无 NaN、无读取失败。",
+    "若 448 输入无法稳定运行，报告中记录降级尺寸和原因。"
+  ],
+  "depends_on": [
+    "004_feature_cache_framework"
+  ],
+  "priority": "required",
+  "resource_profile": {
+    "gpu_memory_gb": "预计 8-20",
+    "batch_size_hint": "先 2，稳定后 4 或 8",
+    "runtime_notes": "该模型用于高分辨率互补，不进行 backbone 微调。"
+  },
+  "implementation_notes": [
+    "该任务取代 InternViT-6B 主线，避免超大模型显存风险。",
+    "如果模型加载需要 trust_remote_code，必须在报告中记录依赖和版本。",
+    "保留原始 test 数字顺序比吞吐更重要。"
+  ]
+}

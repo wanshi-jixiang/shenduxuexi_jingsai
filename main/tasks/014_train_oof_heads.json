@@ -1,0 +1,49 @@
+{
+  "id": "014_train_oof_heads",
+  "title": "训练 5 折 OOF heads",
+  "goal": "对每个候选模型按 5 折训练最佳轻量 head，生成 OOF 概率和每折测试概率。",
+  "inputs": [
+    "outputs/main/oof/fold_feature_manifest.json",
+    "outputs/main/folds/fold_0_train.csv 到 fold_4_val.csv",
+    "outputs/main/reports/oof_candidate_models.json",
+    "configs/main.yaml 中 OOF head 配置",
+    "src/main_metrics.py"
+  ],
+  "outputs": [
+    "outputs/main/oof/<model_id>_oof_probs.npy",
+    "outputs/main/oof/<model_id>_oof_labels.npy",
+    "outputs/main/fusion/<model_id>_fold_test_probs.npy",
+    "outputs/main/heads/<model_id>/fold_0_best.pt 到 fold_4_best.pt",
+    "outputs/main/reports/<model_id>_oof_metrics.json",
+    "outputs/main/reports/oof_training_summary.json"
+  ],
+  "execution_steps": [
+    "对每个候选模型读取 fold_feature_manifest，按 fold 构建 train/val 特征和标签。",
+    "使用单模型筛选阶段获胜的 head 类型作为默认；若单模型报告不稳定，则比较 linear 与 MLP。",
+    "每折用 Macro-F1 选择 best checkpoint，保存该折 val probability 和 test probability。",
+    "将 5 折 val probability 按原始训练样本顺序拼接为完整 OOF 概率。",
+    "将 5 折 test probability 对每个模型做平均，得到该模型 test 概率。",
+    "输出每个模型 OOF Macro-F1、每类 F1、fold 方差和测试概率文件。",
+    "在 oof_training_summary 中标记高方差模型和疑似过拟合模型。"
+  ],
+  "acceptance_criteria": [
+    "每个保留模型都有 [3018, 8] 的 OOF 概率和 [1391, 8] 的 fold 平均 test 概率。",
+    "OOF labels 顺序与全训练 manifest 一致。",
+    "每个模型报告包含 5 个 fold 的 Macro-F1 和标准差。",
+    "任何 fold 训练失败都必须记录，并决定重跑或移除该模型。"
+  ],
+  "depends_on": [
+    "013_build_fivefold_oof_features"
+  ],
+  "priority": "required",
+  "resource_profile": {
+    "gpu_memory_gb": "1-4",
+    "batch_size_hint": "head 训练 batch_size 64-512",
+    "runtime_notes": "head 训练显存低，可并行多个模型或多个 fold。"
+  },
+  "implementation_notes": [
+    "不要用 test 结果选择 fold checkpoint。",
+    "OOF 概率必须来自该样本未参与训练的 fold 模型。",
+    "保存每折 test 概率，方便后续 TTA 或融合诊断。"
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "id": "013_build_fivefold_oof_features",
+  "title": "准备 5 折 OOF 特征",
+  "goal": "为筛选后的模型准备 5 折训练所需特征视图，复用全量缓存或补充按折缓存，确保每个模型能生成 OOF 概率。",
+  "inputs": [
+    "outputs/main/reports/oof_candidate_models.json",
+    "outputs/main/folds/fold_0_train.csv 到 fold_4_val.csv",
+    "outputs/main/folds/test_manifest.csv",
+    "outputs/main/features/<model_id>/*.pt",
+    "src/cache_features_main.py"
+  ],
+  "outputs": [
+    "outputs/main/oof/fold_feature_manifest.json",
+    "outputs/main/features/<model_id>/all_train_features.pt 或 fold 对应特征",
+    "outputs/main/reports/fivefold_feature_readiness.json"
+  ],
+  "execution_steps": [
+    "读取 oof_candidate_models.json，确定进入 5 折的模型列表。",
+    "检查每个候选模型是否已有全训练集特征；如果只有 single_train/single_val，则按原始全训练 manifest 重新缓存 all_train_features。",
+    "确保 all_train_features 的样本顺序可以通过 filepath 或样本 id 映射到每个 fold 的 train/val CSV。",
+    "如果某模型无法构建 all_train_features，则为每折分别缓存 train/val 特征，并记录成本。",
+    "为每个模型保存 fold_feature_manifest，记录 fold 样本索引、特征文件路径和 test 特征路径。",
+    "检查所有候选模型 test 特征维度与样本数。"
+  ],
+  "acceptance_criteria": [
+    "每个 OOF 候选模型都有可用于 5 折 train/val/test 的特征文件或索引映射。",
+    "fold_feature_manifest.json 能被 014_train_oof_heads 直接读取。",
+    "所有 fold 的 val 特征合并后覆盖 3018 个训练样本一次。",
+    "如果候选模型无法进入 5 折，readiness 报告写明原因并从后续融合候选移除。"
+  ],
+  "depends_on": [
+    "012_single_model_error_analysis"
+  ],
+  "priority": "required",
+  "resource_profile": {
+    "gpu_memory_gb": "0-24",
+    "batch_size_hint": "若需要补缓存，沿用对应模型缓存任务 batch_size；否则不需 GPU",
+    "runtime_notes": "优先复用已有特征，避免重复提取。"
+  },
+  "implementation_notes": [
+    "复用特征时必须通过样本路径映射，不能假设不同 CSV 行顺序一致。",
+    "OOF 是最终融合可信度的核心，不要跳过。",
+    "如果磁盘空间紧张，可用 float16 特征和 manifest 索引减少重复。"
+  ]
+}

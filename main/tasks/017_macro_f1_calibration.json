@@ -1,0 +1,49 @@
+{
+  "id": "017_macro_f1_calibration",
+  "title": "Macro-F1 类别校准",
+  "goal": "基于 OOF 概率进行温度、类别 bias 和阈值校准，提升 Macro-F1，尤其关注少数类召回。",
+  "inputs": [
+    "outputs/main/fusion/oof_fused_probs.npy",
+    "outputs/main/fusion/test_fused_probs.npy",
+    "outputs/main/fusion/test_tta_fused_probs.npy",
+    "outputs/main/oof/*_oof_labels.npy",
+    "src/main_metrics.py"
+  ],
+  "outputs": [
+    "outputs/main/fusion/calibration_config.json",
+    "outputs/main/fusion/oof_calibrated_probs.npy",
+    "outputs/main/fusion/test_calibrated_probs.npy",
+    "outputs/main/reports/calibration_metrics.json",
+    "outputs/main/reports/class_bias_search.csv"
+  ],
+  "execution_steps": [
+    "读取主融合 OOF 概率和标签，优先选择非 TTA 或 TTA 中 OOF 表现更好的概率源。",
+    "搜索全局 temperature，比较 calibration 前后的 Macro-F1、NLL 和 per-class F1。",
+    "搜索类别 bias 向量，在 logits 或 log 概率上对 8 类加小幅偏置，目标是 OOF Macro-F1。",
+    "对少数类 disgust、contentment、excitement 做受限 bias 搜索，限制单类 bias 幅度，防止过拟合。",
+    "比较 argmax、class bias argmax、margin-aware threshold 三种决策方式。",
+    "选择最稳的校准配置，应用到 test_fused_probs，生成 test_calibrated_probs。",
+    "输出 calibration_metrics，记录校准前后整体与每类指标变化。"
+  ],
+  "acceptance_criteria": [
+    "校准只使用 OOF 标签，不使用测试标签或线上反馈。",
+    "calibration_config.json 包含 temperature、class_bias、决策方式和适用概率源。",
+    "校准后 OOF Macro-F1 不低于校准前；若低于则回退到原融合概率。",
+    "少数类召回提升不能以头部类别 F1 大幅崩塌为代价。"
+  ],
+  "depends_on": [
+    "015_oof_probability_fusion",
+    "016_tta_probability_generation"
+  ],
+  "priority": "required",
+  "resource_profile": {
+    "gpu_memory_gb": "0",
+    "batch_size_hint": "不涉及 GPU",
+    "runtime_notes": "CPU 上做概率搜索即可。"
+  },
+  "implementation_notes": [
+    "类别 bias 搜索必须有幅度约束和验证记录。",
+    "如果 TTA 概率没有 OOF 估计，只能谨慎与非 TTA 概率融合，不能盲目校准。",
+    "Macro-F1 主指标优先于 Accuracy。"
+  ]
+}

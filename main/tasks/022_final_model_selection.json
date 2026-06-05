@@ -1,0 +1,49 @@
+{
+  "id": "022_final_model_selection",
+  "title": "最终模型选择",
+  "goal": "在无伪标签、专家门控、TTA/校准和伪标签版本之间选择最终提交概率源，并生成完整决策报告。",
+  "inputs": [
+    "outputs/main/reports/fusion_metrics.json",
+    "outputs/main/reports/calibration_metrics.json",
+    "outputs/main/reports/expert_gate_metrics.json",
+    "outputs/main/reports/pseudolabel_vs_no_pseudo.json",
+    "outputs/main/fusion/*.npy",
+    "src/main_metrics.py"
+  ],
+  "outputs": [
+    "outputs/main/reports/final_model_decision.json",
+    "outputs/main/fusion/final_test_probs.npy",
+    "outputs/main/fusion/final_oof_probs.npy",
+    "outputs/main/reports/final_oof_metrics.json"
+  ],
+  "execution_steps": [
+    "收集所有候选版本：base fusion、TTA fusion、calibrated、expert gated、pseudo retrain。",
+    "对每个候选读取对应 OOF 概率，计算统一 Macro-F1、Accuracy、每类 F1 和混淆矩阵。",
+    "按主指标选择最高 OOF Macro-F1 的候选；若差距小于 0.3 个百分点，优先选择更简单、方差更低、少数类更稳的候选。",
+    "检查最终候选是否存在某个类别 F1 明显低于基线；若存在，评估是否回退到次优候选。",
+    "将最终候选 test 概率复制或写入 final_test_probs.npy。",
+    "输出 final_model_decision.json，记录每个候选的指标、是否保留、拒绝原因和最终选择。",
+    "生成 final_oof_metrics.json，作为最终提交的本地证据。"
+  ],
+  "acceptance_criteria": [
+    "final_model_decision.json 清楚说明最终提交来自哪个概率源。",
+    "final_test_probs.npy 维度为 [1391, 8]，类别顺序固定。",
+    "最终选择依据 OOF Macro-F1 与少数类稳定性，而不是测试集猜测。",
+    "保留至少一个回退提交候选。"
+  ],
+  "depends_on": [
+    "019_expert_override_gate",
+    "021_retrain_with_pseudolabels"
+  ],
+  "priority": "required",
+  "resource_profile": {
+    "gpu_memory_gb": "0",
+    "batch_size_hint": "不涉及 GPU",
+    "runtime_notes": "CPU 上汇总指标和复制概率。"
+  },
+  "implementation_notes": [
+    "如果伪标签未通过门控，最终候选应来自 expert gated 或 calibrated。",
+    "不要为了追求复杂度选择不稳定候选。",
+    "最终报告要能复现为什么选择该提交。"
+  ]
+}

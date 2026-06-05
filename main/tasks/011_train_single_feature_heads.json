@@ -1,0 +1,56 @@
+{
+  "id": "011_train_single_feature_heads",
+  "title": "训练单特征源轻量分类头",
+  "goal": "基于每个冻结特征源训练线性头和小 MLP 头，快速筛选主模型池并形成单模型验证报告。",
+  "inputs": [
+    "outputs/main/features/*/single_train_features.pt",
+    "outputs/main/features/*/single_val_features.pt",
+    "outputs/main/folds/single_train.csv",
+    "outputs/main/folds/single_val.csv",
+    "src/main_metrics.py",
+    "configs/main.yaml 中 head 训练配置"
+  ],
+  "outputs": [
+    "outputs/main/heads/<model_id>/linear_best.pt",
+    "outputs/main/heads/<model_id>/mlp_best.pt",
+    "outputs/main/heads/<model_id>/weighted_focal_best.pt",
+    "outputs/main/reports/<model_id>_single_head_metrics.json",
+    "outputs/main/oof/<model_id>_single_val_probs.npy",
+    "outputs/main/fusion/<model_id>_single_test_probs.npy",
+    "outputs/main/reports/single_model_screening_summary.json"
+  ],
+  "execution_steps": [
+    "为每个 feature model 读取 single_train 和 single_val 特征，训练前将特征转为 float32，并按训练集统计做 StandardScaler 或 LayerNorm 对照。",
+    "训练 linear probe：单层 Linear(feature_dim, 8)，损失为 class-weighted cross entropy。",
+    "训练 2 层 MLP：LayerNorm、Linear、GELU、Dropout、Linear，损失为 label smoothing CE 或 class-weighted CE。",
+    "训练 weighted focal 或 logit-adjusted CE head，重点观察 disgust、contentment、excitement。",
+    "每个 head 使用 Macro-F1 选择 best checkpoint，并保存 val probability 和 test probability。",
+    "汇总每个模型最佳 head、Macro-F1、Accuracy、每类 F1、混淆矩阵和耗时。",
+    "筛选进入 5 折 OOF 的模型：Macro-F1 高于 70，或明显补强少数类/错误互补。"
+  ],
+  "acceptance_criteria": [
+    "每个可用特征源至少训练 linear 和 MLP 两个 head。",
+    "所有报告使用统一 evaluate_predictions 接口。",
+    "single_model_screening_summary.json 明确列出进入 OOF 的模型和被拒绝模型原因。",
+    "测试概率维度为 [1391, 8]，验证概率维度与 single_val.csv 行数一致。",
+    "如果某模型 head 训练失败，失败原因写入 summary，不阻塞其他模型。"
+  ],
+  "depends_on": [
+    "005_cache_pe_core_features",
+    "006_cache_dinov3_vitl_features",
+    "007_cache_internvit300m_features",
+    "008_cache_eva02_clip_features",
+    "010_import_existing_candidates"
+  ],
+  "priority": "required",
+  "resource_profile": {
+    "gpu_memory_gb": "1-4",
+    "batch_size_hint": "head 训练 batch_size 64-512；参考 Cambrian head bs16 约 1GB，可从 128 起",
+    "runtime_notes": "特征 head 很轻，可并行跑多个模型或快速网格搜索。"
+  },
+  "implementation_notes": [
+    "不要在此任务中重新提图像特征。",
+    "头结构保持小而稳，避免在 3018 张小数据上过拟合。",
+    "保留概率比保留标签更重要，后续融合依赖概率。"
+  ]
+}
